@@ -11,10 +11,7 @@ This project focuses on predicting customer churn using machine learning techniq
 - [Dataset](#dataset)
 - [Implementation](#implementation)
 - [Results](#results)
-- [How to Use](#how-to-use)
-- [Contributing](#contributing)
-- [License](#license)
-
+  
 ---
 
 ## Introduction
