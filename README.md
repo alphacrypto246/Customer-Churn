@@ -14,6 +14,7 @@ An enterprise-grade, end-to-end Machine Learning web application designed to pre
 - [Installation & Setup](#-installation--setup)
 - [Model Training & Pipelines](#-model-training--pipelines)
 - [Running the Application](#-running-the-application)
+- [Deploying on Render](#-deploying-on-render-step-by-step)
 - [API Reference](#-api-reference)
 - [Frontend Experience & Rule-Based Risk Indicators](#-frontend-experience--rule-based-risk-indicators)
 
@@ -251,6 +252,36 @@ Once started:
 - 🖥️ **Web Dashboard**: Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 - 📖 **Interactive API Documentation (Swagger UI)**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - 📑 **ReDoc Documentation**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+
+---
+
+## ☁️ Deploying on Render (Step-by-Step)
+
+Render is the recommended production host for this project because it natively supports persistent Python web servers with zero bundle limits.
+
+### Option A: Manual Web Service Setup (2 Minutes)
+1. **Push your code to GitHub**:
+   ```bash
+   git add .
+   git commit -m "Prepare for Render deployment"
+   git push origin main
+   ```
+2. Go to **[dashboard.render.com](https://dashboard.render.com)** and sign in.
+3. Click **New +** ➔ **Web Service** ➔ Select your GitHub repository.
+4. Fill in the settings:
+   - **Name**: `customer-churn-predictor`
+   - **Runtime**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - **Instance Type**: `Free`
+5. Click **Create Web Service**. Your app will build and deploy with a live public URL (e.g., `https://customer-churn-predictor.onrender.com`).
+
+---
+
+### Option B: 1-Click Blueprint Deploy
+Because this repository includes [`render.yaml`](file:///c:/My%20Files/My%20Project/End-to-End%20Projects/Churn%20Model/render.yaml), you can also:
+1. In Render Dashboard, click **New +** ➔ **Blueprint**.
+2. Select this repository and click **Apply**. Render will auto-configure all build commands and start scripts.
 
 ---
 
