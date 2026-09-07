@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "catboost>=1.2.10",
     "dotenv>=0.9.9",
+    "fastapi>=0.141.1",
     "imbalanced-learn>=0.14.2",
     "joblib>=1.6.0",
     "lightgbm>=4.7.0",
@@ -17,5 +18,6 @@ dependencies = [
     "scikit-learn>=1.9.0",
     "seaborn>=0.13.2",
     "setuptools>=84.0.0",
+    "uvicorn>=0.52.4",
     "xgboost>=3.4.1",
 ]
