@@ -39,26 +39,94 @@ Customer attrition (churn) directly impacts subscription recurring revenues. Thi
 
 ---
 
-## 🏗 System Architecture
+## 🏗 System Architecture & End-to-End Workflow
 
+The system is architected as a modular, decoupled Machine Learning lifecycle comprising **7 core subsystems**:
+
+```mermaid
+flowchart TD
+    subgraph Data_Layer ["1. Data Storage & Ingestion Layer"]
+        DB[(MongoDB Atlas / Local)] -->|collection.find| Ingest[data_ingestions.py]
+        CSV[raw.csv] -.->|upload_data.py| DB
+        Ingest -->|Stratified Split 80/20| TrainCSV[artifacts/train.csv]
+        Ingest -->|Stratified Split 80/20| TestCSV[artifacts/test.csv]
+    end
+
+    subgraph Transformation_Layer ["2. Feature Transformation Layer"]
+        TrainCSV --> Transform[data_transformation.py]
+        TestCSV --> Transform
+        Transform -->|StandardScaler Fit-Transform| XTrainScaled[X_train_scaled]
+        Transform -->|StandardScaler Transform| XTestScaled[X_test_scaled]
+        Transform -->|Serialize| PrepPKL[(artifacts/preprocessor.pkl)]
+    end
+
+    subgraph Training_Layer ["3. Imbalanced Learning & Model Benchmark Layer"]
+        XTrainScaled --> SMOTE[SMOTE Resampling]
+        SMOTE --> Models{Multi-Model Training}
+        Models --> M1[Logistic Regression]
+        Models --> M2[Random Forest]
+        Models --> M3[Gradient Boosting]
+        Models --> M4[XGBoost Classifier]
+        Models --> M5[LightGBM Classifier]
+        Models --> M6[CatBoost Classifier]
+        M1 & M2 & M3 & M4 & M5 & M6 -->|Evaluate on Test Set: F1, ROC-AUC| Selection[Best Model Selection]
+        Selection -->|Serialize Best Model| ModelPKL[(artifacts/model.pkl)]
+    end
+
+    subgraph Inference_Layer ["4. Inference & Serving Layer"]
+        Client[Frontend Dashboard / API Client] -->|HTTP POST JSON Payload| FastAPI[main.py - FastAPI Application]
+        FastAPI -->|Validate Pydantic Schema| PredictPipe[predict_pipeline.py]
+        PrepPKL -.->|Load Scaler| PredictPipe
+        ModelPKL -.->|Load Classifier| PredictPipe
+        PredictPipe -->|Standardize Features| ScaledInput[Scaled Vector]
+        ScaledInput -->|predict & predict_proba| Output[Prediction & Probability Score]
+        Output -->|JSON Response| FastAPI
+        FastAPI -->|Verdict + Churn Probability| Client
+    end
 ```
-[ Customer Data / Presets ]
-           │
-           ▼
-[ Interactive Frontend UI ] (HTML5 / Vanilla CSS / JavaScript)
-           │
-           │  POST /predict (JSON Payload)
-           ▼
-[ FastAPI Application ] (main.py)
-           │
-           ▼
-[ Predict Pipeline ] (src/pipeline/predict_pipeline.py)
-   ├── Preprocessor (artifacts/preprocessor.pkl) ──> Feature Scaling & Encoding
-   └── Trained Model (artifacts/model.pkl)        ──> Classification & Probabilities
-           │
-           ▼
-[ JSON Prediction & Risk Score Response ]
-```
+
+---
+
+### 🔍 Layer-by-Layer Architectural Breakdown
+
+#### 1. Data Storage & Ingestion Subsystem (`src/database/` & `src/components/data_ingestions.py`)
+- **Persistence**: MongoDB Atlas (`customer_churn` database, `customers` collection) accessed via `PyMongo` with environment-managed credentials (`.env`).
+- **Ingestion**: `initiate_data_ingestion()` fetches document collections without MongoDB `_id` fields, loads them into pandas DataFrames, and performs **Stratified Train/Test Splitting** (`80% Train / 20% Test`, `random_state=42`) preserving class ratios on the target label (`Churn`).
+- **Artifacts Created**: Serializes `artifacts/train.csv` and `artifacts/test.csv`.
+
+#### 2. Feature Transformation Subsystem (`src/components/data_transformation.py`)
+- **Isolation of Preprocessing**: Strict separation of fit and transform steps to eliminate data leakage.
+- **Pipeline Structure**: Employs Scikit-Learn `ColumnTransformer` with `StandardScaler` applied across all numerical telemetry columns (`AccountWeeks`, `DataUsage`, `DayMins`, `MonthlyCharge`, `OverageFee`, etc.).
+- **Artifacts Created**: Serializes fitted transformer to `artifacts/preprocessor.pkl`.
+
+#### 3. Imbalanced Learning & Model Benchmarking (`src/components/model_trainer.py`)
+- **Class Imbalance Remediation**: Training features undergo **SMOTE** (Synthetic Minority Over-sampling Technique) to synthesize minority churn samples, while validation remains strictly on un-resampled test data.
+- **Ensemble Benchmarking**: Trains and evaluates 6 distinct algorithms concurrently:
+  1. *Logistic Regression* (baseline linear model)
+  2. *Random Forest Classifier* (`n_estimators=200`)
+  3. *Gradient Boosting Classifier* (`random_state=42`)
+  4. *XGBoost Classifier* (`n_estimators=200`, `learning_rate=0.05`, `max_depth=5`)
+  5. *LightGBM Classifier* (`n_estimators=200`, `learning_rate=0.05`, `max_depth=5`)
+  6. *CatBoost Classifier* (`iterations=200`, `learning_rate=0.05`, `depth=5`)
+- **Selection Metric**: Automatically selects and persists the best performing model based on **F1-Score** and **ROC-AUC** to `artifacts/model.pkl`.
+
+#### 4. Real-Time Inference Subsystem (`src/pipeline/predict_pipeline.py`)
+- **Single-Pass Inference**: Loads `artifacts/model.pkl` and `artifacts/preprocessor.pkl` into memory upon application startup.
+- **Feature Standardizer**: Converts incoming JSON payload into single-row pandas DataFrame, scales using the serialized preprocessor, and generates both class predictions (`0` or `1`) and confidence probabilities (`model.predict_proba()[:, 1]`).
+
+#### 5. Application & Serving Layer (`main.py`)
+- **Framework**: High-speed asynchronous [FastAPI](https://fastapi.tiangolo.com/) web server mounted with Uvicorn ASGI.
+- **Data Validation**: Strict Pydantic model (`CustomerData`) enforcing data types and constraints on all 10 features.
+- **Static Asset Serving**: Mounts `/static` directory for CSS/JS and maps root `GET /` to `templates/index.html`.
+
+#### 6. Presentation & Client Layer (`templates/` & `static/`)
+- **Design System**: High-contrast **Vibrant Amber (`#FFBE0B`) & Onyx Black (`#101010`)** aesthetic with geometric typography (*Outfit* & *JetBrains Mono*).
+- **Rule-Based Risk Indicators**: Client-side evaluator flagging high support calls ($\ge 4$), unrenewed contracts, overage bill spikes ($> \$15$), and tenure loyalty factors.
+- **Interactive Preset Engine**: Instant telemetry autofill for *Loyal Customer*, *Standard User* (~50% decision boundary), and *High Churn Risk* profiles.
+
+#### 7. Cross-Cutting Infrastructure (`src/logger.py` & `src/exception.py`)
+- **Centralized Logging**: Auto-generates timestamped runtime execution logs under `logs/`.
+- **Custom Exception Handling**: Intercepts traceback metadata capturing script filenames, exact execution line numbers, and detailed error messages.
 
 ---
 
