@@ -1,0 +1,5 @@
+numpy
+pandas
+dotenv
+pymongo
+setuptools
