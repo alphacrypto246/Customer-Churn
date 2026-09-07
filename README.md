@@ -43,46 +43,37 @@ Customer attrition (churn) directly impacts subscription recurring revenues. Thi
 
 The system is architected as a modular, decoupled Machine Learning lifecycle comprising **7 core subsystems**:
 
-```mermaid
-flowchart TD
-    subgraph Data_Layer ["1. Data Storage & Ingestion Layer"]
-        DB[(MongoDB Atlas / Local)] -->|collection.find| Ingest[data_ingestions.py]
-        CSV[raw.csv] -.->|upload_data.py| DB
-        Ingest -->|Stratified Split 80/20| TrainCSV[artifacts/train.csv]
-        Ingest -->|Stratified Split 80/20| TestCSV[artifacts/test.csv]
-    end
-
-    subgraph Transformation_Layer ["2. Feature Transformation Layer"]
-        TrainCSV --> Transform[data_transformation.py]
-        TestCSV --> Transform
-        Transform -->|StandardScaler Fit-Transform| XTrainScaled[X_train_scaled]
-        Transform -->|StandardScaler Transform| XTestScaled[X_test_scaled]
-        Transform -->|Serialize| PrepPKL[(artifacts/preprocessor.pkl)]
-    end
-
-    subgraph Training_Layer ["3. Imbalanced Learning & Model Benchmark Layer"]
-        XTrainScaled --> SMOTE[SMOTE Resampling]
-        SMOTE --> Models{Multi-Model Training}
-        Models --> M1[Logistic Regression]
-        Models --> M2[Random Forest]
-        Models --> M3[Gradient Boosting]
-        Models --> M4[XGBoost Classifier]
-        Models --> M5[LightGBM Classifier]
-        Models --> M6[CatBoost Classifier]
-        M1 & M2 & M3 & M4 & M5 & M6 -->|Evaluate on Test Set: F1, ROC-AUC| Selection[Best Model Selection]
-        Selection -->|Serialize Best Model| ModelPKL[(artifacts/model.pkl)]
-    end
-
-    subgraph Inference_Layer ["4. Inference & Serving Layer"]
-        Client[Frontend Dashboard / API Client] -->|HTTP POST JSON Payload| FastAPI[main.py - FastAPI Application]
-        FastAPI -->|Validate Pydantic Schema| PredictPipe[predict_pipeline.py]
-        PrepPKL -.->|Load Scaler| PredictPipe
-        ModelPKL -.->|Load Classifier| PredictPipe
-        PredictPipe -->|Standardize Features| ScaledInput[Scaled Vector]
-        ScaledInput -->|predict & predict_proba| Output[Prediction & Probability Score]
-        Output -->|JSON Response| FastAPI
-        FastAPI -->|Verdict + Churn Probability| Client
-    end
+```text
+┌───────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 1. DATA STORAGE & INGESTION (src/components/data_ingestions.py & src/database/)               │
+│    MongoDB Atlas / Raw CSV ──> Stratified Train/Test Split (80/20) ──> train.csv & test.csv   │
+└───────────────────────────────────────────────┬───────────────────────────────────────────────┘
+                                                │
+                                                ▼
+┌───────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 2. FEATURE TRANSFORMATION (src/components/data_transformation.py)                             │
+│    StandardScaler ColumnTransformer ──> Scaled Matrices ──> artifacts/preprocessor.pkl       │
+└───────────────────────────────────────────────┬───────────────────────────────────────────────┘
+                                                │
+                                                ▼
+┌───────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 3. MODEL TRAINING & SMOTE (src/components/model_trainer.py)                                   │
+│    SMOTE Resampling ──> Train 6 Classifiers ──> Best F1-Score Model ──> artifacts/model.pkl    │
+│    (Logistic Regression | Random Forest | Gradient Boosting | XGBoost | LightGBM | CatBoost) │
+└───────────────────────────────────────────────┬───────────────────────────────────────────────┘
+                                                │
+                                                ▼
+┌───────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 4. FASTAPI & PREDICTION ENGINE (main.py & src/pipeline/predict_pipeline.py)                   │
+│    POST /predict ──> Pydantic Validation ──> Standardize ──> predict & predict_proba()        │
+│    Returns: { "prediction": "Churn" | "No Churn", "churn_probability": 0.9716 }               │
+└───────────────────────────────────────────────┬───────────────────────────────────────────────┘
+                                                │
+                                                ▼
+┌───────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 5. PRESENTATION & CLIENT DASHBOARD (templates/ & static/)                                     │
+│    Amber (#FFBE0B) & Onyx (#101010) UI ──> Probability Gauge ──> Rule-Based Risk Indicators  │
+└───────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
