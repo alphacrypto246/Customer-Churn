@@ -1,10 +1,14 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from src.pipeline.predict_pipeline import PredictPipeline
 
 
 app = FastAPI(title="Customer Churn Prediction API")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 class CustomerData(BaseModel):
@@ -26,7 +30,7 @@ pipeline = PredictPipeline()
 
 @app.get("/")
 def home():
-    return {"message": "Customer Churn Prediction API is running"}
+    return FileResponse("templates/index.html")
 
 
 @app.post("/predict")

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Churn Predictor | AI Risk Engine</title>
+    <!-- Google Fonts: Outfit & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body>
+    <div class="background-glow top-left"></div>
+    <div class="background-glow bottom-right"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand-section">
+                <div class="brand-badge">
+                    <span class="badge-dot"></span>
+                    <span>AI Retention Engine</span>
+                </div>
+                <h1 class="main-title">Customer Churn <span class="gradient-text">Predictor</span></h1>
+                <p class="subtitle">Real-time predictive telemetry & retention intelligence powered by machine learning.</p>
+            </div>
+            
+            <div class="header-actions">
+                <div class="api-status-pill" id="apiStatusPill">
+                    <span class="status-dot"></span>
+                    <span class="status-text" id="apiStatusText">Checking API...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Quick Presets -->
+        <div class="presets-container">
+            <span class="presets-label">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+                Profiles:
+            </span>
+            <div class="preset-buttons">
+                <button type="button" class="preset-btn" id="btnPresetLoyal">
+                    <span class="preset-indicator low"></span>
+                    Loyal Customer
+                </button>
+                <button type="button" class="preset-btn" id="btnPresetAverage">
+                    <span class="preset-indicator mid"></span>
+                    Standard User
+                </button>
+                <button type="button" class="preset-btn" id="btnPresetAtRisk">
+                    <span class="preset-indicator high"></span>
+                    High Churn Risk
+                </button>
+                <button type="button" class="preset-btn outline" id="btnResetForm">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                    </svg>
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <main class="dashboard-grid">
+            <!-- Form Section -->
+            <section class="card form-card">
+                <form id="churnForm" autocomplete="off">
+                    
+                    <!-- Section 1: Account & Plan Details -->
+                    <div class="form-group-section">
+                        <div class="section-title-wrap">
+                            <span class="section-number">01</span>
+                            <div>
+                                <h2 class="section-title">Account & Subscription</h2>
+                                <p class="section-subtitle">Customer relationship and contract status</p>
+                            </div>
+                        </div>
+
+                        <div class="grid-2-cols">
+                            <div class="input-field-group">
+                                <label for="AccountWeeks">
+                                    Account Tenure
+                                    <span class="tooltip" title="Total number of weeks the customer has maintained an account">?</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="AccountWeeks" name="AccountWeeks" min="1" max="500" placeholder="e.g. 100" required>
+                                    <span class="input-suffix">weeks</span>
+                                </div>
+                            </div>
+
+                            <div class="input-field-group">
+                                <label for="CustServCalls">
+                                    Support Calls
+                                    <span class="tooltip" title="Total calls made to customer service">?</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="CustServCalls" name="CustServCalls" min="0" max="25" placeholder="e.g. 2" required>
+                                    <span class="input-suffix">calls</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid-2-cols toggles-grid">
+                            <div class="switch-field-group">
+                                <div class="switch-label-col">
+                                    <span class="field-title">Contract Renewal</span>
+                                    <span class="field-desc">Did customer renew contract recently?</span>
+                                </div>
+                                <div class="segmented-control">
+                                    <input type="radio" id="contract_no" name="ContractRenewal" value="0">
+                                    <label for="contract_no">No (0)</label>
+                                    <input type="radio" id="contract_yes" name="ContractRenewal" value="1" checked>
+                                    <label for="contract_yes">Yes (1)</label>
+                                </div>
+                            </div>
+
+                            <div class="switch-field-group">
+                                <div class="switch-label-col">
+                                    <span class="field-title">Data Plan</span>
+                                    <span class="field-desc">Active cellular data plan subscription</span>
+                                </div>
+                                <div class="segmented-control">
+                                    <input type="radio" id="dataplan_no" name="DataPlan" value="0">
+                                    <label for="dataplan_no">No (0)</label>
+                                    <input type="radio" id="dataplan_yes" name="DataPlan" value="1" checked>
+                                    <label for="dataplan_yes">Yes (1)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Usage & Activity -->
+                    <div class="form-group-section">
+                        <div class="section-title-wrap">
+                            <span class="section-number">02</span>
+                            <div>
+                                <h2 class="section-title">Usage & Voice Telemetry</h2>
+                                <p class="section-subtitle">Daily voice minutes, call volume, and data traffic</p>
+                            </div>
+                        </div>
+
+                        <div class="grid-2-cols">
+                            <div class="input-field-group">
+                                <label for="DataUsage">
+                                    Data Usage
+                                    <span class="tooltip" title="Monthly data traffic used in gigabytes">?</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="DataUsage" name="DataUsage" step="0.01" min="0" max="100" placeholder="e.g. 2.7" required>
+                                    <span class="input-suffix">GB</span>
+                                </div>
+                            </div>
+
+                            <div class="input-field-group">
+                                <label for="DayMins">
+                                    Daytime Voice
+                                    <span class="tooltip" title="Average daytime minutes used per month">?</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="DayMins" name="DayMins" step="0.1" min="0" max="1000" placeholder="e.g. 180.5" required>
+                                    <span class="input-suffix">mins</span>
+                                </div>
+                            </div>
+
+                            <div class="input-field-group">
+                                <label for="DayCalls">
+                                    Daytime Calls
+                                    <span class="tooltip" title="Total daytime voice calls made">?</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="DayCalls" name="DayCalls" min="0" max="500" placeholder="e.g. 95" required>
+                                    <span class="input-suffix">calls</span>
+                                </div>
+                            </div>
+
+                            <div class="input-field-group">
+                                <label for="RoamMins">
+                                    Roaming Voice
+                                    <span class="tooltip" title="Average roaming minutes outside network">?</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="RoamMins" name="RoamMins" step="0.1" min="0" max="200" placeholder="e.g. 10.0" required>
+                                    <span class="input-suffix">mins</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Billing & Charges -->
+                    <div class="form-group-section">
+                        <div class="section-title-wrap">
+                            <span class="section-number">03</span>
+                            <div>
+                                <h2 class="section-title">Billing & Fee Structure</h2>
+                                <p class="section-subtitle">Monthly invoices and fee accumulation</p>
+                            </div>
+                        </div>
+
+                        <div class="grid-2-cols">
+                            <div class="input-field-group">
+                                <label for="MonthlyCharge">
+                                    Monthly Bill
+                                    <span class="tooltip" title="Base monthly average charge">?</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <span class="input-prefix">$</span>
+                                    <input type="number" id="MonthlyCharge" name="MonthlyCharge" step="0.01" min="0" max="500" placeholder="e.g. 54.00" required>
+                                </div>
+                            </div>
+
+                            <div class="input-field-group">
+                                <label for="OverageFee">
+                                    Max Overage Fee
+                                    <span class="tooltip" title="Largest overage fee charged in the last 12 months">?</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <span class="input-prefix">$</span>
+                                    <input type="number" id="OverageFee" name="OverageFee" step="0.01" min="0" max="100" placeholder="e.g. 9.80" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn" id="btnSubmit">
+                            <span class="btn-text">Run Churn Analysis</span>
+                            <span class="btn-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                            </span>
+                            <div class="spinner" id="btnSpinner"></div>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Results Section -->
+            <section class="card results-card" id="resultsCard">
+                <!-- Empty State -->
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon-box">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </div>
+                    <h3>Ready For Analysis</h3>
+                    <p>Enter customer telemetry metrics and click <strong>Run Churn Analysis</strong> to evaluate retention probability.</p>
+                </div>
+
+                <!-- Analysis Content -->
+                <div class="analysis-content" id="analysisContent" style="display: none;">
+                    <div class="results-header">
+                        <span class="results-tag">Prediction Output</span>
+                        <span class="timestamp" id="analysisTimestamp">Just now</span>
+                    </div>
+
+                    <!-- Verdict Banner -->
+                    <div class="verdict-banner" id="verdictBanner">
+                        <div class="verdict-icon" id="verdictIcon"></div>
+                        <div class="verdict-details">
+                            <span class="verdict-label">Status</span>
+                            <h2 class="verdict-title" id="verdictTitle">--</h2>
+                            <p class="verdict-desc" id="verdictDesc">--</p>
+                        </div>
+                    </div>
+
+                    <!-- Probability Card -->
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Predicted Churn Probability</span>
+                            <span class="metric-percentage" id="probabilityText">0.0%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="probabilityBar" style="width: 0%;"></div>
+                        </div>
+                        <div class="risk-scale-labels">
+                            <span>0% (Safe)</span>
+                            <span>50% (Threshold)</span>
+                            <span>100% (High Risk)</span>
+                        </div>
+                    </div>
+
+                    <!-- Customer Risk Indicators -->
+                    <div class="insights-section">
+                        <h4 class="insights-title">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 16v-4"></path>
+                                <path d="M12 8h.01"></path>
+                            </svg>
+                            Customer Risk Indicators (Rule-Based)
+                        </h4>
+                        <ul class="insights-list" id="insightsList"></ul>
+                    </div>
+
+                    <!-- JSON Inspector -->
+                    <details class="json-inspector">
+                        <summary>
+                            <span>Inspect API Request & Response</span>
+                            <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </summary>
+                        <div class="json-box">
+                            <pre><code id="jsonPayload">// Telemetry payload will appear here</code></pre>
+                        </div>
+                    </details>
+                </div>
+            </section>
+        </main>
+
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script src="../static/script.js"></script>
+</body>
+</html>
