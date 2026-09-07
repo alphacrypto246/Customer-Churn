@@ -5,6 +5,8 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 
+import joblib
+
 from src.logger import logging
 from src.exception import CustomException
 
@@ -49,6 +51,9 @@ class DataTransformation:
             X_train_scaled = preprocessor.fit_transform(X_train)
             X_test_scaled = preprocessor.transform(X_test)
 
+            joblib.dump(preprocessor, self.preprocessor_path)
+
+            logging.info("Preprocessor saved successfully")
             logging.info("Data transformation completed")
 
             return (
