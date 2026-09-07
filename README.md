@@ -43,37 +43,50 @@ Customer attrition (churn) directly impacts subscription recurring revenues. Thi
 
 The system is architected as a modular, decoupled Machine Learning lifecycle comprising **7 core subsystems**:
 
-```text
-┌───────────────────────────────────────────────────────────────────────────────────────────────┐
-│ 1. DATA STORAGE & INGESTION (src/components/data_ingestions.py & src/database/)               │
-│    MongoDB Atlas / Raw CSV ──> Stratified Train/Test Split (80/20) ──> train.csv & test.csv   │
-└───────────────────────────────────────────────┬───────────────────────────────────────────────┘
-                                                │
-                                                ▼
-┌───────────────────────────────────────────────────────────────────────────────────────────────┐
-│ 2. FEATURE TRANSFORMATION (src/components/data_transformation.py)                             │
-│    StandardScaler ColumnTransformer ──> Scaled Matrices ──> artifacts/preprocessor.pkl       │
-└───────────────────────────────────────────────┬───────────────────────────────────────────────┘
-                                                │
-                                                ▼
-┌───────────────────────────────────────────────────────────────────────────────────────────────┐
-│ 3. MODEL TRAINING & SMOTE (src/components/model_trainer.py)                                   │
-│    SMOTE Resampling ──> Train 6 Classifiers ──> Best F1-Score Model ──> artifacts/model.pkl    │
-│    (Logistic Regression | Random Forest | Gradient Boosting | XGBoost | LightGBM | CatBoost) │
-└───────────────────────────────────────────────┬───────────────────────────────────────────────┘
-                                                │
-                                                ▼
-┌───────────────────────────────────────────────────────────────────────────────────────────────┐
-│ 4. FASTAPI & PREDICTION ENGINE (main.py & src/pipeline/predict_pipeline.py)                   │
-│    POST /predict ──> Pydantic Validation ──> Standardize ──> predict & predict_proba()        │
-│    Returns: { "prediction": "Churn" | "No Churn", "churn_probability": 0.9716 }               │
-└───────────────────────────────────────────────┬───────────────────────────────────────────────┘
-                                                │
-                                                ▼
-┌───────────────────────────────────────────────────────────────────────────────────────────────┐
-│ 5. PRESENTATION & CLIENT DASHBOARD (templates/ & static/)                                     │
-│    Amber (#FFBE0B) & Onyx (#101010) UI ──> Probability Gauge ──> Rule-Based Risk Indicators  │
-└───────────────────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'clusterBkg': 'transparent', 'clusterBorder': '#FFBE0B', 'edgeLabelBackground': '#141414', 'primaryColor': '#1c1c1c', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#FFBE0B', 'lineColor': '#FFBE0B', 'tertiaryColor': '#141414' }}}%%
+flowchart TD
+    subgraph S1 ["1. Data Storage & Ingestion Layer"]
+        DB[(MongoDB / Raw CSV)] -->|Fetch Records| Ingest["data_ingestions.py"]
+        Ingest -->|Stratified Split 80/20| TrainCSV["artifacts/train.csv"]
+        Ingest -->|Stratified Split 80/20| TestCSV["artifacts/test.csv"]
+    end
+
+    subgraph S2 ["2. Feature Transformation Layer"]
+        TrainCSV --> Transform["data_transformation.py"]
+        TestCSV --> Transform
+        Transform -->|Fit & Transform| XTrainScaled["X_train_scaled"]
+        Transform -->|Transform Only| XTestScaled["X_test_scaled"]
+        Transform -->|Persist Scaler| PrepPKL[(artifacts/preprocessor.pkl)]
+    end
+
+    subgraph S3 ["3. Imbalanced Learning & Model Benchmark"]
+        XTrainScaled --> SMOTE["SMOTE Resampling"]
+        SMOTE --> Models{"Multi-Model Training"}
+        Models --> M1["Logistic Regression"]
+        Models --> M2["Random Forest"]
+        Models --> M3["Gradient Boosting"]
+        Models --> M4["XGBoost Classifier"]
+        Models --> M5["LightGBM Classifier"]
+        Models --> M6["CatBoost Classifier"]
+        M1 & M2 & M3 & M4 & M5 & M6 -->|Evaluate F1 & ROC-AUC| Selection["Select Best Model"]
+        Selection -->|Persist Classifier| ModelPKL[(artifacts/model.pkl)]
+    end
+
+    subgraph S4 ["4. Inference & Serving Layer"]
+        Client["Frontend Dashboard (Amber & Onyx UI)"] -->|POST /predict JSON| FastAPI["FastAPI (main.py)"]
+        FastAPI -->|Pydantic CustomerData| PredictPipe["predict_pipeline.py"]
+        PrepPKL -.->|Load Scaler| PredictPipe
+        ModelPKL -.->|Load Classifier| PredictPipe
+        PredictPipe -->|Standardize & Predict| Output["Prediction: Verdict + Churn Probability"]
+        Output --> FastAPI
+        FastAPI -->|JSON Response| Client
+    end
+
+    style S1 fill:transparent,stroke:#FFBE0B,stroke-width:1px,stroke-dasharray: 4 4
+    style S2 fill:transparent,stroke:#FFBE0B,stroke-width:1px,stroke-dasharray: 4 4
+    style S3 fill:transparent,stroke:#FFBE0B,stroke-width:1px,stroke-dasharray: 4 4
+    style S4 fill:transparent,stroke:#FFBE0B,stroke-width:1px,stroke-dasharray: 4 4
 ```
 
 ---
